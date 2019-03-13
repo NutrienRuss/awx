@@ -2302,7 +2302,7 @@ class gce(PluginFileInjector):
         # missing: gce_image, gce_uuid
         # https://github.com/ansible/ansible/issues/51884
         return {
-            'gce_description': 'description | default(None)',
+            'gce_description': 'description if description else None',
             'gce_machine_type': 'machineType',
             'gce_name': 'name',
             'gce_network': 'networkInterfaces | json_query("[0].network.name")',
