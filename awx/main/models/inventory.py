@@ -2083,7 +2083,7 @@ class ec2(PluginFileInjector):
             'ec2_state': 'state.name',
             'ec2_state_code': 'state.code',
             'ec2_state_reason': 'state_reason.message if state_reason is defined else ""',
-            'ec2_sourceDestCheck': 'source_dest_check | lower | string',  # butchered snake_case case not a typo.
+            'ec2_sourceDestCheck': 'source_dest_check | default(false) | lower | string',  # butchered snake_case case not a typo.
             'ec2_account_id': 'network_interfaces | json_query("[0].owner_id")',
             # vars that just need ec2_ prefix
             'ec2_ami_launch_index': 'ami_launch_index | string',
@@ -2102,10 +2102,11 @@ class ec2(PluginFileInjector):
             'ec2_region': 'placement.region',
             'ec2_root_device_name': 'root_device_name',
             'ec2_root_device_type': 'root_device_type',
-            'ec2_spot_instance_request_id': 'spot_instance_request_id',
-            'ec2_subnet_id': 'subnet_id',
+            # this syntax does not work, we do not yet have a translation for this
+            # 'ec2_spot_instance_request_id': 'spot_instance_request_id',
+            'ec2_subnet_id': 'subnet_id | default("")',
             'ec2_virtualization_type': 'virtualization_type',
-            'ec2_vpc_id': 'vpc_id',
+            'ec2_vpc_id': 'vpc_id | default("")',
             # same as ec2_ip_address, the script provided this
             'ansible_host': 'public_ip_address',
         }
