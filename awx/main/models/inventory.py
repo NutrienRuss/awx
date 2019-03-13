@@ -1182,7 +1182,7 @@ class InventorySourceOptions(BaseModel):
         help_text=_('Overwrite local variables from remote inventory source.'),
     )
     compatibility_mode = models.BooleanField(
-        default=False,
+        default=True,
         help_text=_('This field is deprecated and will be removed in a future release. '
                     'Restore old hostvars and names from before the transition to inventory plugins.'),
     )
