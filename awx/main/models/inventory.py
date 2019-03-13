@@ -2102,8 +2102,8 @@ class ec2(PluginFileInjector):
             'ec2_region': 'placement.region',
             'ec2_root_device_name': 'root_device_name',
             'ec2_root_device_type': 'root_device_type',
-            # this syntax does not work, we do not yet have a translation for this
-            # 'ec2_spot_instance_request_id': 'spot_instance_request_id',
+            # many items need blank defaults because the script tended to keep a common schema
+            'ec2_spot_instance_request_id': 'spot_instance_request_id | default("")',
             'ec2_subnet_id': 'subnet_id | default("")',
             'ec2_virtualization_type': 'virtualization_type',
             'ec2_vpc_id': 'vpc_id | default("")',
@@ -2341,6 +2341,7 @@ class gce(PluginFileInjector):
             keyed_groups = [
                 # the jinja2 syntax is duplicated with compose
                 # https://github.com/ansible/ansible/issues/51883
+                {'prefix': 'network', 'key': 'networkInterfaces | json_query("[0].subnetwork.name")'},  # gce_subnetwork
                 {'prefix': '', 'separator': '', 'key': 'networkInterfaces | json_query("[0].networkIP")'},  # gce_private_ip
                 {'prefix': '', 'separator': '', 'key': 'networkInterfaces | json_query("[0].accessConfigs[0].natIP")'},  # gce_public_ip
                 {'prefix': '', 'separator': '', 'key': 'machineType'},
