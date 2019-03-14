@@ -51,6 +51,10 @@ hostnames:
 - private-dns-name
 keyed_groups:
 - key: placement.availability_zone
+  parent_group: '{{ placement.region }}'
+  prefix: ''
+  separator: ''
+- key: placement.availability_zone
   parent_group: zones
   prefix: ''
   separator: ''

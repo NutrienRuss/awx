@@ -2117,7 +2117,11 @@ class ec2(PluginFileInjector):
         keyed_groups = []
         group_by_hostvar = {
             'ami_id': {'prefix': '', 'separator': '', 'key': 'image_id', 'parent_group': 'images'},
-            'availability_zone': {'prefix': '', 'separator': '', 'key': 'placement.availability_zone', 'parent_group': 'zones'},
+            # 2 entries for zones for same groups to establish 2 parentage trees
+            'availability_zone': [
+                {'prefix': '', 'separator': '', 'key': 'placement.availability_zone', 'parent_group': '{{ placement.region }}'},
+                {'prefix': '', 'separator': '', 'key': 'placement.availability_zone', 'parent_group': 'zones'},
+            ],
             'aws_account': {'prefix': '', 'separator': '', 'key': 'network_interfaces | json_query("[0].owner_id")', 'parent_group': 'accounts'},
             'instance_id': {'prefix': '', 'separator': '', 'key': 'instance_id', 'parent_group': 'instances'},  # normally turned off
             'instance_state': {'prefix': 'instance_state', 'key': 'state.name', 'parent_group': 'instance_states'},
@@ -2170,7 +2174,7 @@ class ec2(PluginFileInjector):
             # thus, we always have to use this option, and always use our custom regex
             ret['use_contrib_script_compatible_sanitization'] = True
             for grouping_data in keyed_groups:
-                if grouping_data['parent_group'] in ('regions', 'zones'):  # definition of region-ish
+                if grouping_data['key'] in ('placement.region', 'placement.availability_zone'):
                     # us-east-2 is always us-east-2 according to ec2.py
                     # no sanitization in region-ish groups for the script standards, ever ever
                     continue
