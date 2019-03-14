@@ -198,7 +198,7 @@ export default ['$state', '$stateParams', '$scope', 'SourcesFormDefinition',
             $scope.group_by = null;
             $scope.group_by_choices = [];
             $scope.overwrite_vars = false;
-            $scope.compatibility_mode = false;
+            $scope.compatibility_mode = true;
             initRegionSelect();
         };
         // region / source options callback
