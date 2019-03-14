@@ -125,12 +125,12 @@ class AnsibleInventoryLoader(object):
     def get_base_args(self):
         # get ansible-inventory absolute path for running in bubblewrap/proot, in Popen
 
-        # NOTE:  why do we add "python" to the start of these args?
+        # NOTE: why do we add "python" to the start of these args?
         # the script that runs ansible-inventory specifies a python interpreter
         # that makes no sense in light of the fact that we put all the dependencies
         # inside of /venv/ansible, so we override the specified interpreter
         # https://github.com/ansible/ansible/issues/50714
-        bargs= ['python', self.get_path_to_ansible_inventory(), '-i', self.source]
+        bargs = ['python', self.get_path_to_ansible_inventory(), '-i', self.source]
         logger.debug('Using base command: {}'.format(' '.join(bargs)))
         return bargs
 
@@ -908,7 +908,8 @@ class Command(BaseCommand):
             raise CommandError("License has expired!")
         # special check for tower-type inventory sources
         # but only if running the plugin
-        if self.inventory_source.source == 'tower' and ('tower.yml' in self.source or 'tower.yaml' in self.source):
+        TOWER_SOURCE_FILES = ['tower.yml', 'tower.yaml']
+        if self.inventory_source.source == 'tower' and any(f in self.source for f in TOWER_SOURCE_FILES):
             # only if this is the 2nd call to license check, we cannot compare before running plugin
             if hasattr(self, 'all_group'):
                 self.remote_tower_license_compare(local_license_type)
