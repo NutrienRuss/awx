@@ -31,15 +31,15 @@ compose:
   ec2_root_device_type: root_device_type
   ec2_security_group_ids: security_groups | map(attribute='group_id') | list |  join(',')
   ec2_security_group_names: security_groups | map(attribute='group_name') | list |  join(',')
-  ec2_sourceDestCheck: source_dest_check | lower | string
-  ec2_spot_instance_request_id: spot_instance_request_id
+  ec2_sourceDestCheck: source_dest_check | default(false) | lower | string
+  ec2_spot_instance_request_id: spot_instance_request_id | default("")
   ec2_state: state.name
   ec2_state_code: state.code
   ec2_state_reason: state_reason.message if state_reason is defined else ""
-  ec2_subnet_id: subnet_id
+  ec2_subnet_id: subnet_id | default("")
   ec2_tag_Name: tags.Name
   ec2_virtualization_type: virtualization_type
-  ec2_vpc_id: vpc_id
+  ec2_vpc_id: vpc_id | default("")
 filters:
   instance-state-name:
   - running

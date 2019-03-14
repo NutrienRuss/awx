@@ -1,7 +1,7 @@
 auth_kind: serviceaccount
 compose:
   ansible_ssh_host: networkInterfaces | json_query("[0].accessConfigs[0].natIP")
-  gce_description: description | default(None)
+  gce_description: description if description else None
   gce_id: id
   gce_machine_type: machineType
   gce_metadata: metadata.get("items", []) | items2dict(key_name="key", value_name="value")
@@ -18,6 +18,8 @@ hostnames:
 - public_ip
 - private_ip
 keyed_groups:
+- key: networkInterfaces | json_query("[0].subnetwork.name")
+  prefix: network
 - key: networkInterfaces | json_query("[0].networkIP")
   prefix: ''
   separator: ''
