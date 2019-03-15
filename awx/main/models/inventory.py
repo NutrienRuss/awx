@@ -1959,6 +1959,12 @@ class azure_rm(PluginFileInjector):
     ini_env_reference = 'AZURE_INI_PATH'
     base_injector = 'managed'
 
+    def get_plugin_env(self, *args, **kwargs):
+        ret = super(azure_rm, self).get_plugin_env(*args, **kwargs)
+        # We need native jinja2 types so that tags can give JSON null value
+        ret['ANSIBLE_JINJA2_NATIVE'] = str(True)
+        return ret
+
     def inventory_as_dict(self, inventory_update, private_data_dir):
         ret = super(azure_rm, self).inventory_as_dict(inventory_update, private_data_dir)
 
