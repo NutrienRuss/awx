@@ -1986,7 +1986,8 @@ class azure_rm(PluginFileInjector):
                 'provisioning_state': 'provisioning_state | title',
                 'computer_name': 'name',
                 'type': 'resource_type',
-                'private_ip': 'private_ipv4_addresses | json_query("[0]")'
+                'private_ip': 'private_ipv4_addresses | json_query("[0]")',
+                'public_ip': 'public_ipv4_addresses | json_query("[0]")'
             }
         else:
             # Hopefully no one is using this after moving to plugins, but applying this
@@ -2100,6 +2101,10 @@ class ec2(PluginFileInjector):
             'ec2_vpc_id': 'vpc_id | default("")',
             # same as ec2_ip_address, the script provided this
             'ansible_host': 'public_ip_address',
+            # new with https://github.com/ansible/ansible/pull/53645
+            'ec2_eventsSet': 'events | default("")',
+            'ec2_persistent': 'persistent | default(false)',
+            'ec2_requester_id': 'requester_id | default("")'
         }
 
     def inventory_as_dict(self, inventory_update, private_data_dir):

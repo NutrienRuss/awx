@@ -7,6 +7,7 @@ hostvar_expressions:
   computer_name: name
   private_ip: private_ipv4_addresses | json_query("[0]")
   provisioning_state: provisioning_state | title
+  public_ip: public_ipv4_addresses | json_query("[0]")
   type: resource_type
 keyed_groups:
 - key: location
