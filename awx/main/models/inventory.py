@@ -2121,10 +2121,7 @@ class ec2(PluginFileInjector):
         group_by_hostvar = {
             'ami_id': {'prefix': '', 'separator': '', 'key': 'image_id', 'parent_group': 'images'},
             # 2 entries for zones for same groups to establish 2 parentage trees
-            'availability_zone': [
-                {'prefix': '', 'separator': '', 'key': 'placement.availability_zone', 'parent_group': '{{ placement.region }}'},
-                {'prefix': '', 'separator': '', 'key': 'placement.availability_zone', 'parent_group': 'zones'},
-            ],
+            'availability_zone': {'prefix': '', 'separator': '', 'key': 'placement.availability_zone', 'parent_group': 'zones'},
             'aws_account': {'prefix': '', 'separator': '', 'key': 'network_interfaces | json_query("[0].owner_id")', 'parent_group': 'accounts'},
             'instance_id': {'prefix': '', 'separator': '', 'key': 'instance_id', 'parent_group': 'instances'},  # normally turned off
             'instance_state': {'prefix': 'instance_state', 'key': 'state.name', 'parent_group': 'instance_states'},
@@ -2161,6 +2158,9 @@ class ec2(PluginFileInjector):
                         keyed_groups.extend(this_keyed_group)
                     else:
                         keyed_groups.append(this_keyed_group)
+        # special case, this parentage is only added if both zones and regions are present
+        if 'region' in group_by and 'availability_zone' in group_by:
+            keyed_groups.append({'prefix': '', 'separator': '', 'key': 'placement.availability_zone', 'parent_group': '{{ placement.region }}'})
 
         source_vars = inventory_update.source_vars_dict
         # This is a setting from the script, hopefully no one used it
