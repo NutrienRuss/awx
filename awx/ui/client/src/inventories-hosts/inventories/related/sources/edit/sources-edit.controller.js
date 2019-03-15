@@ -404,7 +404,7 @@ export default ['$state', '$scope', 'ParseVariableString', 'ParseTypeChange',
             $scope.group_by = null;
             $scope.group_by_choices = [];
             $scope.overwrite_vars = false;
-            $scope.compatibility_mode = false;
+            $scope.compatibility_mode = true;
 
             initRegionSelect();
 
