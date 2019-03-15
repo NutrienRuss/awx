@@ -1987,7 +1987,8 @@ class azure_rm(PluginFileInjector):
                 'computer_name': 'name',
                 'type': 'resource_type',
                 'private_ip': 'private_ipv4_addresses | json_query("[0]")',
-                'public_ip': 'public_ipv4_addresses | json_query("[0]")'
+                'public_ip': 'public_ipv4_addresses | json_query("[0]")',
+                'tags': 'tags if tags else None'
             }
         else:
             # Hopefully no one is using this after moving to plugins, but applying this
