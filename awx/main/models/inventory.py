@@ -1970,20 +1970,37 @@ class azure_rm(PluginFileInjector):
 
         source_vars = inventory_update.source_vars_dict
 
+        group_by_hostvar = {
+            'location': {'prefix': '', 'separator': '', 'key': 'location'},
+            # Introduced with https://github.com/ansible/ansible/pull/53046
+            'security_group': {'prefix': '', 'separator': '', 'key': 'security_group'},
+            'resource_group': {'prefix': '', 'separator': '', 'key': 'resource_group'},
+            'os_family': {'prefix': '', 'separator': '', 'key': 'os_disk.operating_system_type'}
+        }
+        if inventory_update.compatibility_mode:
+            # by default group by everything
+            group_by = set(group_by_hostvar.keys())
+        else:
+            group_by = set()
+        # always respect user setting, if they gave it
+        for grouping_name in group_by_hostvar:
+            # Groups that the script returned, group_by field was never implemented
+            # done in source_vars instead
+            vars_key = 'group_by_{}'.format(grouping_name)
+            if vars_key in source_vars:
+                if source_vars[vars_key]:
+                    group_by.add(grouping_name)
+                else:
+                    if grouping_name in group_by:
+                        group_by.remove(grouping_name)
+        ret['keyed_groups'] = [group_by_hostvar[grouping_name] for grouping_name in group_by]
+
         if inventory_update.compatibility_mode:
             # Dashes actually were not configurable in azure_rm.py script
             # however, we do not want unicode, so we use this
             ret['use_contrib_script_compatible_sanitization'] = True
             # By default the script did not filter hosts
             ret['default_host_filters'] = []
-            # Groups that the script returned, group_by field was never implemented
-            ret['keyed_groups'] = [
-                {'prefix': '', 'separator': '', 'key': 'location'},
-                # Introduced with https://github.com/ansible/ansible/pull/53046
-                {'prefix': '', 'separator': '', 'key': 'security_group'},
-                {'prefix': '', 'separator': '', 'key': 'resource_group'},
-                {'prefix': '', 'separator': '', 'key': 'os_disk.operating_system_type'}
-            ]
 
             # One static group that was returned by script
             ret['conditional_groups'] = {'azure': True}
@@ -2001,9 +2018,6 @@ class azure_rm(PluginFileInjector):
             # setting will at least trigger the global redactor to warn user
             if 'replace_dash_in_groups' in source_vars:
                 ret['use_contrib_script_compatible_sanitization'] = not source_vars['replace_dash_in_groups']
-            if inventory_update.group_by:
-                # Group by whatever user gave us, give standard plugin behavior
-                ret['keyed_groups'] = [{'key': x.strip()} for x in inventory_update.group_by.split(',') if x.strip()]
             if inventory_update.instance_filters:
                 ret.setdefault('exclude_host_filters', [])
                 for filter in inventory_update.instance_filters.split(','):
