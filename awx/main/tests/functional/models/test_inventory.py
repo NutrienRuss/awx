@@ -266,7 +266,7 @@ class TestInventorySourceInjectors:
         inv_src = InventorySource(
             name='azure source', source='azure_rm',
             compatibility_mode=True,
-            group_by='powerstate'
+            source_vars={'group_by_os_family': True}
         )
         compat_on = injector.inventory_as_dict(inv_src, '/tmp/foo')
         # suspicious, yes, that is just what the script did
@@ -275,7 +275,7 @@ class TestInventorySourceInjectors:
         compat_off = injector.inventory_as_dict(inv_src, '/tmp/foo')
         # much better, everyone should turn off the flag and live in the future
         assert len(compat_off['keyed_groups']) == 1
-        assert 'powerstate' in compat_off['keyed_groups'][0].get('key')
+        assert 'operating_system_type' in compat_off['keyed_groups'][0].get('key')
 
     def test_tower_plugin_named_url(self):
         injector = InventorySource.injectors['tower']('2.9')

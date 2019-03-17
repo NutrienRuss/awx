@@ -49,7 +49,10 @@ INI_TEST_VARS = {
     'vmware': {
         # setting VMWARE_VALIDATE_CERTS is duplicated with env var
     },
-    'azure_rm': {},  # there are none
+    'azure_rm': {
+        'use_private_ip': True,
+        'resource_groups': 'foo_resources,bar_resources'
+    },
     'satellite6': {
         'satellite6_group_patterns': 'foo_group_patterns',
         'satellite6_group_prefix': 'foo_group_prefix',

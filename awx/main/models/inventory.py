@@ -2001,6 +2001,23 @@ class azure_rm(PluginFileInjector):
             ret['use_contrib_script_compatible_sanitization'] = True
             # By default the script did not filter hosts
             ret['default_host_filters'] = []
+            # User-given host filters
+            user_filters = []
+            old_filterables = [
+                ('resource_groups', 'resource_group'),
+                ('tags', 'tags')
+                # locations / location would be an entry
+                # but this would conflict with source_regions
+            ]
+            for key, loc in old_filterables:
+                value = source_vars.get(key, None)
+                if value and isinstance(value, str):
+                    user_filters.append('{} not in {}'.format(
+                        loc, value.split(',')
+                    ))
+            if user_filters:
+                ret.setdefault('exclude_host_filters', [])
+                ret['exclude_host_filters'].extend(user_filters)
 
             # One static group that was returned by script
             ret['conditional_groups'] = {'azure': True}
@@ -2013,6 +2030,9 @@ class azure_rm(PluginFileInjector):
                 'public_ip': 'public_ipv4_addresses | json_query("[0]")',
                 'tags': 'tags if tags else None'
             }
+            # Special functionality from script
+            if source_vars.get('use_private_ip', False):
+                ret['hostvar_expressions']['ansible_host'] = 'private_ipv4_addresses | json_query("[0]")'
         else:
             # Hopefully no one is using this after moving to plugins, but applying this
             # setting will at least trigger the global redactor to warn user
