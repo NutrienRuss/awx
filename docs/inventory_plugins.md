@@ -47,17 +47,15 @@ to the inventory plugin model.
 
 In AWX 4.0.0 (and Tower 3.5) inventory source types start to switchover
 to plugins, provided that sufficient compatibility is in place for
-the version of Ansible present in the custom virtualenv where the import
-is being ran.
+the version of Ansible present in the local virtualenv.
 
 To see what version the plugin transition will happen, see
 `awx/main/models/inventory.py` and look for the source name as a
 subclass of `PluginFileInjector`, and there should be an `initial_version`
 which is the first version that testing deemed to have sufficient parity
 in the content its inventory plugin returns. For example, `openstack` will
-begin using the inventory plugin in Ansible version 2.8, because the
-openstack inventory plugin had an issue with sending logs to stdout which
-was fixed in that version. If you run an openstack inventory update in
+begin using the inventory plugin in Ansible version 2.8.
+If you run an openstack inventory update in
 2.8 or lower, it will use the script.
 
 ### Sunsetting the scripts
@@ -65,7 +63,7 @@ was fixed in that version. If you run an openstack inventory update in
 Eventually, it is intended that all source types will have moved to
 plugins. For any given source, after the `initial_version` for plugin use
 is higher than the lowest supported Ansible version, the script can be
-removed and the logic for script credential injection can also be removed.
+removed and the logic for script credential injection will also be removed.
 
 For example, after AWX no longer supports Ansible 2.7, the script
 `awx/plugins/openstack_inventory.py` will be removed.
@@ -75,15 +73,10 @@ For example, after AWX no longer supports Ansible 2.7, the script
 An effort was made to keep imports working in the exact same way after
 the switchover. However, the inventory plugins are a fundamental rewrite
 and many elements of default behavior has changed. Because of that,
-a `compatibility_mode` toggle was added.
+a `compatibility_mode` toggle was added. This defaults to True.
 
-In a data migration, all existing cloud sources are switched over to
-use `compatibility_mode`. New inventory sources will default to having
-this off.
-
-We recommend that you opt out of compatibility mode because this is more
-future-proof, and also suggest that you set the `overwrite`
-flag to help assure stale content is removed.
+Turning off compatibility mode will be more future-proof.
+Keeping it on, will be more stable and consistent.
 
 ### Changes with Compatibility Mode Off
 

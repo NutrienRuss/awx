@@ -1822,7 +1822,7 @@ class CustomInventoryScript(CommonModelNameNotUnique, ResourceMixin):
 class PluginFileInjector(object):
     # if plugin_name is not given, no inventory plugin functionality exists
     plugin_name = None  # Ansible core name used to reference plugin
-    # if initial_version is None, but we have pugin name, injection logic exists,
+    # if initial_version is None, but we have plugin name, injection logic exists,
     # but it is vaporware, meaning we do not use it for some reason in Ansible core
     initial_version = None  # at what version do we switch to the plugin
     ini_env_reference = None  # env var name that points to old ini config file
@@ -1952,10 +1952,7 @@ class PluginFileInjector(object):
 
 class azure_rm(PluginFileInjector):
     plugin_name = 'azure_rm'
-    # FIXME: put in correct version when Ansible core fixes are in
-    # 2.8 does not have all needed hostvars https://github.com/ansible/ansible/issues/51864
-    # also affected by unsafe group names issue
-    initial_version = '2.8'
+    initial_version = '2.8'  # Driven by unsafe group names issue, hostvars
     ini_env_reference = 'AZURE_INI_PATH'
     base_injector = 'managed'
 
@@ -2080,11 +2077,7 @@ class azure_rm(PluginFileInjector):
 
 class ec2(PluginFileInjector):
     plugin_name = 'aws_ec2'
-    # FIXME: put in correct version when Ansible core fixes are in
-    # 2.5 has bugs forming keyed groups
-    # 2.8 does not allow parent groups or group names like us-east-2 (unsafe group names issue)
-    # 2.8 does not have all needed hostvars https://github.com/ansible/ansible/issues/52358
-    initial_version = '2.8'
+    initial_version = '2.8'  # Driven by unsafe group names issue, parent_group templating, hostvars
     ini_env_reference = 'EC2_INI_PATH'
     base_injector = 'managed'
 
@@ -2323,10 +2316,7 @@ class ec2(PluginFileInjector):
 
 class gce(PluginFileInjector):
     plugin_name = 'gcp_compute'
-    # FIXME: put in correct version when Ansible core fixes are in
-    # 2.8 does not have all needed hostvars https://github.com/ansible/ansible/issues/51884
-    # also affected by unsafe group names issue
-    initial_version = '2.8'
+    initial_version = '2.8'  # Driven by unsafe group names issue, hostvars
     base_injector = 'managed'
 
     def get_script_env(self, inventory_update, private_data_dir, private_data_files):
@@ -2461,9 +2451,8 @@ class vmware(PluginFileInjector):
 class openstack(PluginFileInjector):
     ini_env_reference = 'OS_CLIENT_CONFIG_FILE'
     plugin_name = 'openstack'
-    # 2.7.8 limit: https://github.com/ansible/ansible/pull/52369
-    # however, the unsafe group names issue still applies, limiting to 2.8
-    initial_version = '2.8'
+    # minimum version of 2.7.8 may be theoretically possible
+    initial_version = '2.8'  # Driven by consistency with other sources
 
     @property
     def script_name(self):
@@ -2683,7 +2672,7 @@ class cloudforms(PluginFileInjector):
 class tower(PluginFileInjector):
     plugin_name = 'tower'
     base_injector = 'template'
-    initial_version = '2.8'
+    initial_version = '2.8'  # Driven by "include_metadata" hostvars
 
     def get_script_env(self, inventory_update, private_data_dir, private_data_files):
         env = super(tower, self).get_script_env(inventory_update, private_data_dir, private_data_files)
