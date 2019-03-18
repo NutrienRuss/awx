@@ -1969,9 +1969,11 @@ class azure_rm(PluginFileInjector):
 
         group_by_hostvar = {
             'location': {'prefix': '', 'separator': '', 'key': 'location'},
+            'tag': {'prefix': '', 'separator': '', 'key': 'tags.keys() if tags else []'},
             # Introduced with https://github.com/ansible/ansible/pull/53046
             'security_group': {'prefix': '', 'separator': '', 'key': 'security_group'},
             'resource_group': {'prefix': '', 'separator': '', 'key': 'resource_group'},
+            # Note, os_family was not documented correctly in script, but defaulted to grouping by it
             'os_family': {'prefix': '', 'separator': '', 'key': 'os_disk.operating_system_type'}
         }
         if inventory_update.compatibility_mode:
@@ -1992,6 +1994,12 @@ class azure_rm(PluginFileInjector):
                     if grouping_name in group_by:
                         group_by.remove(grouping_name)
         ret['keyed_groups'] = [group_by_hostvar[grouping_name] for grouping_name in group_by]
+        if 'tag' in group_by:
+            # Nasty syntax to reproduce "key_value" group names in addition to "key"
+            group_by.append({
+                'prefix': '', 'separator': '',
+                'key': r'dict(tags.keys() | map("regex_replace", "^(.*)$", "\1_") | list | zip(tags.values() | list)) if tags else []'
+            })
 
         if inventory_update.compatibility_mode:
             # Dashes actually were not configurable in azure_rm.py script
