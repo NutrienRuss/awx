@@ -13,6 +13,9 @@ hostvar_expressions:
   tags: tags if tags else None
   type: resource_type
 keyed_groups:
+- key: resource_group
+  prefix: ''
+  separator: ''
 - key: os_disk.operating_system_type
   prefix: ''
   separator: ''
@@ -20,9 +23,6 @@ keyed_groups:
   prefix: ''
   separator: ''
 - key: location
-  prefix: ''
-  separator: ''
-- key: resource_group
   prefix: ''
   separator: ''
 plugin: azure_rm
