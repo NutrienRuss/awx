@@ -1979,9 +1979,9 @@ class azure_rm(PluginFileInjector):
         }
         if inventory_update.compatibility_mode:
             # by default group by everything
-            group_by = set(group_by_hostvar.keys())
+            group_by = list(group_by_hostvar.keys())
         else:
-            group_by = set()
+            group_by = list()
         # always respect user setting, if they gave it
         for grouping_name in group_by_hostvar:
             # Groups that the script returned, group_by field was never implemented
@@ -1989,7 +1989,8 @@ class azure_rm(PluginFileInjector):
             vars_key = 'group_by_{}'.format(grouping_name)
             if vars_key in source_vars:
                 if source_vars[vars_key]:
-                    group_by.add(grouping_name)
+                    if grouping_name not in group_by:
+                        group_by.append(grouping_name)
                 else:
                     if grouping_name in group_by:
                         group_by.remove(grouping_name)
