@@ -36,7 +36,9 @@ TEST_SOURCE_FIELDS = {
 }
 
 INI_TEST_VARS = {
-    'ec2': {},
+    'ec2': {
+        'boto_profile': '/tmp/my_boto_stuff'
+    },
     'gce': {},
     'openstack': {
         'private': False,

@@ -2228,6 +2228,10 @@ class ec2(PluginFileInjector):
                     # string transformation
                     grouping_data['key'] += ' | regex_replace("{rx}", "_")'.format(rx=legacy_regex)
 
+        # This was an allowed ec2.ini option, also plugin option, so pass through
+        if source_vars.get('boto_profile', None):
+            ret['boto_profile'] = source_vars['boto_profile']
+
         elif not replace_dash:
             # Using the plugin, but still want dashes whitelisted
             ret['use_contrib_script_compatible_sanitization'] = True
