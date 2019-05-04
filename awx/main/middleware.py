@@ -19,8 +19,7 @@ from django.utils.functional import curry
 from django.shortcuts import get_object_or_404, redirect
 from django.apps import apps
 from django.utils.translation import ugettext_lazy as _
-from django.core.urlresolvers import reverse
-from django.urls import resolve
+from django.urls import reverse, resolve
 
 from awx.main.models import ActivityStream
 from awx.main.utils.named_url_graph import generate_graph, GraphNode
@@ -127,8 +126,8 @@ class SessionTimeoutMiddleware(object):
 
     def process_response(self, request, response):
         should_skip = 'HTTP_X_WS_SESSION_QUIET' in request.META
-        req_session = getattr(request, 'session', None)
-        if req_session and not req_session.is_empty() and should_skip is False:
+        # Only update the session if it hasn't been flushed by being forced to log out.
+        if request.session and not request.session.is_empty() and not should_skip:
             expiry = int(settings.SESSION_COOKIE_AGE)
             request.session.set_expiry(expiry)
             response['Session-Timeout'] = expiry
