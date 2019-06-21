@@ -118,7 +118,7 @@ register(
     default=_load_default_license_from_file,
     label=_('License'),
     help_text=_('The license controls which features and functionality are '
-                'enabled. Use /api/v1/config/ to update or change '
+                'enabled. Use /api/v2/config/ to update or change '
                 'the license.'),
     category=_('System'),
     category_slug='system',
@@ -567,6 +567,16 @@ register(
                 'awx.anlytics ignore this setting)'),
     category=_('Logging'),
     category_slug='logging',
+)
+
+
+register(
+    'BROKER_DURABILITY',
+    field_class=fields.BooleanField,
+    label=_('Message Durability'),
+    help_text=_('When set (the default), underlying queues will be persisted to disk.  Disable this to enable higher message bus throughput.'),
+    category=_('System'),
+    category_slug='system',
 )
 
 

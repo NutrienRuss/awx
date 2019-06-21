@@ -18,7 +18,7 @@ from django.db import models
 from django.utils.encoding import smart_str
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
-from django.core.exceptions import ValidationError, FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist
 
 # REST Framework
 from rest_framework.exceptions import ParseError
@@ -152,21 +152,9 @@ class JobOptions(BaseModel):
 
     extra_vars_dict = VarsDictProperty('extra_vars', True)
 
-    def clean_credential(self):
-        cred = self.credential
-        if cred and cred.kind != 'ssh':
-            raise ValidationError(
-                _('You must provide an SSH credential.'),
-            )
-        return cred
-
-    def clean_vault_credential(self):
-        cred = self.vault_credential
-        if cred and cred.kind != 'vault':
-            raise ValidationError(
-                _('You must provide a Vault credential.'),
-            )
-        return cred
+    @property
+    def machine_credential(self):
+        return self.credentials.filter(credential_type__kind='ssh').first()
 
     @property
     def network_credentials(self):
@@ -179,41 +167,6 @@ class JobOptions(BaseModel):
     @property
     def vault_credentials(self):
         return list(self.credentials.filter(credential_type__kind='vault'))
-
-    @property
-    def credential(self):
-        cred = self.get_deprecated_credential('ssh')
-        if cred is not None:
-            return cred.pk
-
-    @property
-    def vault_credential(self):
-        cred = self.get_deprecated_credential('vault')
-        if cred is not None:
-            return cred.pk
-
-    def get_deprecated_credential(self, kind):
-        for cred in self.credentials.all():
-            if cred.credential_type.kind == kind:
-                return cred
-        else:
-            return None
-
-    # TODO: remove when API v1 is removed
-    @property
-    def cloud_credential(self):
-        try:
-            return self.cloud_credentials[-1].pk
-        except IndexError:
-            return None
-
-    # TODO: remove when API v1 is removed
-    @property
-    def network_credential(self):
-        try:
-            return self.network_credentials[-1].pk
-        except IndexError:
-            return None
 
     @property
     def passwords_needed_to_start(self):
@@ -482,19 +435,21 @@ class JobTemplate(UnifiedJobTemplate, JobOptions, SurveyJobTemplateMixin, Resour
         base_notification_templates = NotificationTemplate.objects
         error_notification_templates = list(base_notification_templates.filter(
             unifiedjobtemplate_notification_templates_for_errors__in=[self, self.project]))
+        started_notification_templates = list(base_notification_templates.filter(
+            unifiedjobtemplate_notification_templates_for_started__in=[self, self.project]))
         success_notification_templates = list(base_notification_templates.filter(
             unifiedjobtemplate_notification_templates_for_success__in=[self, self.project]))
-        any_notification_templates = list(base_notification_templates.filter(
-            unifiedjobtemplate_notification_templates_for_any__in=[self, self.project]))
         # Get Organization NotificationTemplates
         if self.project is not None and self.project.organization is not None:
             error_notification_templates = set(error_notification_templates + list(base_notification_templates.filter(
                 organization_notification_templates_for_errors=self.project.organization)))
+            started_notification_templates = set(started_notification_templates + list(base_notification_templates.filter(
+                organization_notification_templates_for_started=self.project.organization)))
             success_notification_templates = set(success_notification_templates + list(base_notification_templates.filter(
                 organization_notification_templates_for_success=self.project.organization)))
-            any_notification_templates = set(any_notification_templates + list(base_notification_templates.filter(
-                organization_notification_templates_for_any=self.project.organization)))
-        return dict(error=list(error_notification_templates), success=list(success_notification_templates), any=list(any_notification_templates))
+        return dict(error=list(error_notification_templates),
+                    started=list(started_notification_templates),
+                    success=list(success_notification_templates))
 
     '''
     RelatedJobsMixin
@@ -707,7 +662,7 @@ class Job(UnifiedJob, JobOptions, SurveyJobMixin, JobNotificationMixin, TaskMana
         data.update(dict(inventory=self.inventory.name if self.inventory else None,
                          project=self.project.name if self.project else None,
                          playbook=self.playbook,
-                         credential=getattr(self.get_deprecated_credential('ssh'), 'name', None),
+                         credential=getattr(self.machine_credential, 'name', None),
                          limit=self.limit,
                          extra_vars=self.display_extra_vars(),
                          hosts=all_hosts))
@@ -1139,7 +1094,8 @@ class SystemJobOptions(BaseModel):
     SYSTEM_JOB_TYPE = [
         ('cleanup_jobs', _('Remove jobs older than a certain number of days')),
         ('cleanup_activitystream', _('Remove activity stream entries older than a certain number of days')),
-        ('cleanup_facts', _('Purge and/or reduce the granularity of system tracking data')),
+        ('clearsessions', _('Removes expired browser sessions from the database')),
+        ('cleartokens', _('Removes expired OAuth 2 access tokens and refresh tokens'))
     ]
 
     class Meta:
@@ -1179,13 +1135,13 @@ class SystemJobTemplate(UnifiedJobTemplate, SystemJobOptions):
         base_notification_templates = NotificationTemplate.objects.all()
         error_notification_templates = list(base_notification_templates
                                             .filter(unifiedjobtemplate_notification_templates_for_errors__in=[self]))
+        started_notification_templates = list(base_notification_templates
+                                              .filter(unifiedjobtemplate_notification_templates_for_started__in=[self]))
         success_notification_templates = list(base_notification_templates
                                               .filter(unifiedjobtemplate_notification_templates_for_success__in=[self]))
-        any_notification_templates = list(base_notification_templates
-                                          .filter(unifiedjobtemplate_notification_templates_for_any__in=[self]))
         return dict(error=list(error_notification_templates),
-                    success=list(success_notification_templates),
-                    any=list(any_notification_templates))
+                    started=list(started_notification_templates),
+                    success=list(success_notification_templates))
 
     def _accept_or_ignore_job_kwargs(self, _exclude_errors=None, **kwargs):
         extra_data = kwargs.pop('extra_vars', {})

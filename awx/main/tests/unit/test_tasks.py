@@ -258,7 +258,7 @@ class TestExtraVarSanitation(TestJobExecution):
         job.created_by = User(pk=123, username='angry-spud')
 
         task = tasks.RunJob()
-        task.build_extra_vars_file(job, private_data_dir, {})
+        task.build_extra_vars_file(job, private_data_dir)
 
         fd = open(os.path.join(private_data_dir, 'env', 'extravars'))
         extra_vars = yaml.load(fd, Loader=SafeLoader)
@@ -282,7 +282,7 @@ class TestExtraVarSanitation(TestJobExecution):
         job.extra_vars = json.dumps({'msg': self.UNSAFE})
         task = tasks.RunJob()
 
-        task.build_extra_vars_file(job, private_data_dir, {})
+        task.build_extra_vars_file(job, private_data_dir)
 
         fd = open(os.path.join(private_data_dir, 'env', 'extravars'))
         extra_vars = yaml.load(fd, Loader=SafeLoader)
@@ -293,7 +293,7 @@ class TestExtraVarSanitation(TestJobExecution):
         job.extra_vars = json.dumps({'msg': {'a': [self.UNSAFE]}})
         task = tasks.RunJob()
 
-        task.build_extra_vars_file(job, private_data_dir, {})
+        task.build_extra_vars_file(job, private_data_dir)
 
         fd = open(os.path.join(private_data_dir, 'env', 'extravars'))
         extra_vars = yaml.load(fd, Loader=SafeLoader)
@@ -304,7 +304,7 @@ class TestExtraVarSanitation(TestJobExecution):
         job.job_template.extra_vars = job.extra_vars = json.dumps({'msg': self.UNSAFE})
         task = tasks.RunJob()
 
-        task.build_extra_vars_file(job, private_data_dir, {})
+        task.build_extra_vars_file(job, private_data_dir)
 
         fd = open(os.path.join(private_data_dir, 'env', 'extravars'))
         extra_vars = yaml.load(fd, Loader=SafeLoader)
@@ -316,7 +316,7 @@ class TestExtraVarSanitation(TestJobExecution):
         job.job_template.extra_vars = job.extra_vars
         task = tasks.RunJob()
 
-        task.build_extra_vars_file(job, private_data_dir, {})
+        task.build_extra_vars_file(job, private_data_dir)
 
         fd = open(os.path.join(private_data_dir, 'env', 'extravars'))
         extra_vars = yaml.load(fd, Loader=SafeLoader)
@@ -333,7 +333,7 @@ class TestExtraVarSanitation(TestJobExecution):
         })
         task = tasks.RunJob()
 
-        task.build_extra_vars_file(job, private_data_dir, {})
+        task.build_extra_vars_file(job, private_data_dir)
 
         fd = open(os.path.join(private_data_dir, 'env', 'extravars'))
         extra_vars = yaml.load(fd, Loader=SafeLoader)
@@ -348,7 +348,7 @@ class TestExtraVarSanitation(TestJobExecution):
         job.extra_vars = json.dumps({'msg': self.UNSAFE})
         task = tasks.RunJob()
 
-        task.build_extra_vars_file(job, private_data_dir, {})
+        task.build_extra_vars_file(job, private_data_dir)
 
         fd = open(os.path.join(private_data_dir, 'env', 'extravars'))
         extra_vars = yaml.load(fd, Loader=SafeLoader)
@@ -378,6 +378,7 @@ class TestGenericRun():
         job.status = 'running'
         job.cancel_flag = True
         job.websocket_emit_status = mock.Mock()
+        job.send_notification_templates = mock.Mock()
 
         task = tasks.RunJob()
         task.update_model = mock.Mock(wraps=update_model_wrapper)
@@ -468,7 +469,7 @@ class TestGenericRun():
 
         task = tasks.RunJob()
         task._write_extra_vars_file = mock.Mock()
-        task.build_extra_vars_file(job, None, dict())
+        task.build_extra_vars_file(job, None)
 
         call_args, _ = task._write_extra_vars_file.call_args_list[0]
 
@@ -489,7 +490,7 @@ class TestGenericRun():
 
         task = tasks.RunJob()
         task._write_extra_vars_file = mock.Mock()
-        task.build_extra_vars_file(job, None, dict())
+        task.build_extra_vars_file(job, None)
 
         call_args, _ = task._write_extra_vars_file.call_args_list[0]
 
@@ -536,6 +537,7 @@ class TestAdhocRun(TestJobExecution):
     def test_options_jinja_usage(self, adhoc_job, adhoc_update_model_wrapper):
         adhoc_job.module_args = '{{ ansible_ssh_pass }}'
         adhoc_job.websocket_emit_status = mock.Mock()
+        adhoc_job.send_notification_templates = mock.Mock()
 
         task = tasks.RunAdHocCommand()
         task.update_model = mock.Mock(wraps=adhoc_update_model_wrapper)
@@ -577,7 +579,7 @@ class TestAdhocRun(TestJobExecution):
 
         task = tasks.RunAdHocCommand()
         task._write_extra_vars_file = mock.Mock()
-        task.build_extra_vars_file(adhoc_job, None, dict())
+        task.build_extra_vars_file(adhoc_job, None)
 
         call_args, _ = task._write_extra_vars_file.call_args_list[0]
 
@@ -688,13 +690,19 @@ class TestJobCredentials(TestJobExecution):
         job.websocket_emit_status = mock.Mock()
         job._credentials = []
 
+        def _credentials_filter(credential_type__kind=None):
+            creds = job._credentials
+            if credential_type__kind:
+                creds = [c for c in creds if c.credential_type.kind == credential_type__kind]
+            return mock.Mock(
+                __iter__ = lambda *args: iter(creds),
+                first = lambda: creds[0] if len(creds) else None
+            )
+
         credentials_mock = mock.Mock(**{
             'all': lambda: job._credentials,
             'add': job._credentials.append,
-            'filter.return_value': mock.Mock(
-                __iter__ = lambda *args: iter(job._credentials),
-                first = lambda: job._credentials[0]
-            ),
+            'filter.side_effect': _credentials_filter,
             'prefetch_related': lambda _: credentials_mock,
             'spec_set': ['all', 'add', 'filter', 'prefetch_related'],
         })
@@ -872,7 +880,7 @@ class TestJobCredentials(TestJobExecution):
     def test_multi_vault_password(self, private_data_dir, job):
         task = tasks.RunJob()
         vault = CredentialType.defaults['vault']()
-        for i, label in enumerate(['dev', 'prod']):
+        for i, label in enumerate(['dev', 'prod', 'dotted.name']):
             credential = Credential(
                 pk=i,
                 credential_type=vault,
@@ -892,10 +900,12 @@ class TestJobCredentials(TestJobExecution):
         )
         assert vault_passwords['Vault password \(prod\):\\s*?$'] == 'pass@prod'  # noqa
         assert vault_passwords['Vault password \(dev\):\\s*?$'] == 'pass@dev'  # noqa
+        assert vault_passwords['Vault password \(dotted.name\):\\s*?$'] == 'pass@dotted.name'  # noqa
         assert vault_passwords['Vault password:\\s*?$'] == ''  # noqa
         assert '--ask-vault-pass' not in ' '.join(args)
         assert '--vault-id dev@prompt' in ' '.join(args)
         assert '--vault-id prod@prompt' in ' '.join(args)
+        assert '--vault-id dotted.name@prompt' in ' '.join(args)
 
     def test_multi_vault_id_conflict(self, job):
         task = tasks.RunJob()
@@ -1685,7 +1695,7 @@ class TestProjectUpdateCredentials(TestJobExecution):
         assert settings.PROJECTS_ROOT in process_isolation['process_isolation_show_paths']
 
         task._write_extra_vars_file = mock.Mock()
-        task.build_extra_vars_file(project_update, private_data_dir, {})
+        task.build_extra_vars_file(project_update, private_data_dir)
 
         call_args, _ = task._write_extra_vars_file.call_args_list[0]
         _, extra_vars = call_args
@@ -2234,7 +2244,9 @@ class TestInventoryUpdateCredentials(TestJobExecution):
         inventory_update.get_extra_credentials = mocker.Mock(return_value=[])
         settings.AWX_TASK_ENV = {'FOO': 'BAR'}
 
-        env = task.build_env(inventory_update, private_data_dir, False)
+        with mocker.patch('awx.main.tasks._get_ansible_version', mocker.MagicMock(return_value='2.7')):
+            private_data_files = task.build_private_data_files(inventory_update, private_data_dir)
+            env = task.build_env(inventory_update, private_data_dir, False, private_data_files)
 
         assert env['FOO'] == 'BAR'
 
@@ -2246,7 +2258,7 @@ def test_os_open_oserror():
 
 def test_fcntl_ioerror():
     with pytest.raises(OSError):
-        fcntl.flock(99999, fcntl.LOCK_EX)
+        fcntl.lockf(99999, fcntl.LOCK_EX)
 
 
 @mock.patch('os.open')
@@ -2274,8 +2286,8 @@ def test_aquire_lock_open_fail_logged(logging_getLogger, os_open):
 @mock.patch('os.open')
 @mock.patch('os.close')
 @mock.patch('logging.getLogger')
-@mock.patch('fcntl.flock')
-def test_aquire_lock_acquisition_fail_logged(fcntl_flock, logging_getLogger, os_close, os_open):
+@mock.patch('fcntl.lockf')
+def test_aquire_lock_acquisition_fail_logged(fcntl_lockf, logging_getLogger, os_close, os_open):
     err = IOError()
     err.errno = 3
     err.strerror = 'dummy message'
@@ -2289,7 +2301,7 @@ def test_aquire_lock_acquisition_fail_logged(fcntl_flock, logging_getLogger, os_
     logger = mock.Mock()
     logging_getLogger.return_value = logger
 
-    fcntl_flock.side_effect = err
+    fcntl_lockf.side_effect = err
 
     ProjectUpdate = tasks.RunProjectUpdate()
     with pytest.raises(IOError, message='dummy message'):
