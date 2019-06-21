@@ -11,6 +11,7 @@ from jinja2 import Environment, StrictUndefined
 from jinja2.exceptions import UndefinedError, TemplateSyntaxError
 
 # Django
+import django
 from django.core import exceptions as django_exceptions
 from django.db.models.signals import (
     post_save,
@@ -24,8 +25,10 @@ from django.db.models.fields.related_descriptors import (
     ForwardManyToOneDescriptor,
     ManyToManyDescriptor,
     ReverseManyToOneDescriptor,
+    create_forward_many_to_many_manager
 )
 from django.utils.encoding import smart_text
+from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 
 # jsonschema
@@ -52,8 +55,8 @@ from awx.main import utils
 
 
 __all__ = ['AutoOneToOneField', 'ImplicitRoleField', 'JSONField',
-           'SmartFilterField', 'update_role_parentage_for_instance',
-           'is_implicit_parent']
+           'SmartFilterField', 'OrderedManyToManyField',
+           'update_role_parentage_for_instance', 'is_implicit_parent']
 
 
 # Provide a (better) custom error message for enum jsonschema validation
@@ -635,7 +638,7 @@ class CredentialInputField(JSONSchemaField):
                 v != '$encrypted$',
                 model_instance.pk
             ]):
-                if not isinstance(getattr(model_instance, k), str):
+                if not isinstance(model_instance.inputs.get(k), str):
                     raise django_exceptions.ValidationError(
                         _('secret values must be of type string, not {}').format(type(v).__name__),
                         code='invalid',
@@ -701,15 +704,15 @@ class CredentialInputField(JSONSchemaField):
             #   'ssh_key_unlock': 'do-you-need-me?',
             # }
             # ...we have to fetch the actual key value from the database
-            if model_instance.pk and model_instance.ssh_key_data == '$encrypted$':
-                model_instance.ssh_key_data = model_instance.__class__.objects.get(
+            if model_instance.pk and model_instance.inputs.get('ssh_key_data') == '$encrypted$':
+                model_instance.inputs['ssh_key_data'] = model_instance.__class__.objects.get(
                     pk=model_instance.pk
-                ).ssh_key_data
+                ).inputs.get('ssh_key_data')
 
             if model_instance.has_encrypted_ssh_key_data and not value.get('ssh_key_unlock'):
                 errors['ssh_key_unlock'] = [_('must be set when SSH key is encrypted.')]
             if all([
-                model_instance.ssh_key_data,
+                model_instance.inputs.get('ssh_key_data'),
                 value.get('ssh_key_unlock'),
                 not model_instance.has_encrypted_ssh_key_data
             ]):
@@ -987,3 +990,115 @@ class OAuth2ClientSecretField(models.CharField):
         if value and value.startswith('$encrypted$'):
             return decrypt_value(get_encryption_key('value', pk=None), value)
         return value
+
+
+class OrderedManyToManyDescriptor(ManyToManyDescriptor):
+    """
+    Django doesn't seem to support:
+
+    class Meta:
+        ordering = [...]
+
+    ...on custom through= relations for ManyToMany fields.
+
+    Meaning, queries made _through_ the intermediary table will _not_ apply an
+    ORDER_BY clause based on the `Meta.ordering` of the intermediary M2M class
+    (which is the behavior we want for "ordered" many to many relations):
+
+    https://github.com/django/django/blob/stable/1.11.x/django/db/models/fields/related_descriptors.py#L593
+
+    This descriptor automatically sorts all queries through this relation
+    using the `position` column on the M2M table.
+    """
+
+    @cached_property
+    def related_manager_cls(self):
+        model = self.rel.related_model if self.reverse else self.rel.model
+
+        def add_custom_queryset_to_many_related_manager(many_related_manage_cls):
+            class OrderedManyRelatedManager(many_related_manage_cls):
+                def get_queryset(self):
+                    return super(OrderedManyRelatedManager, self).get_queryset().order_by(
+                        '%s__position' % self.through._meta.model_name
+                    )
+
+                def add(self, *objs):
+                    # Django < 2 doesn't support this method on
+                    # ManyToManyFields w/ an intermediary model
+                    # We should be able to remove this code snippet when we
+                    # upgrade Django.
+                    # see: https://github.com/django/django/blob/stable/1.11.x/django/db/models/fields/related_descriptors.py#L926
+                    if not django.__version__.startswith('1.'):
+                        raise RuntimeError(
+                            'This method is no longer necessary in Django>=2'
+                        )
+                    try:
+                        self.through._meta.auto_created = True
+                        super(OrderedManyRelatedManager, self).add(*objs)
+                    finally:
+                        self.through._meta.auto_created = False
+
+                def remove(self, *objs):
+                    # Django < 2 doesn't support this method on
+                    # ManyToManyFields w/ an intermediary model
+                    # We should be able to remove this code snippet when we
+                    # upgrade Django.
+                    # see: https://github.com/django/django/blob/stable/1.11.x/django/db/models/fields/related_descriptors.py#L944
+                    if not django.__version__.startswith('1.'):
+                        raise RuntimeError(
+                            'This method is no longer necessary in Django>=2'
+                        )
+                    try:
+                        self.through._meta.auto_created = True
+                        super(OrderedManyRelatedManager, self).remove(*objs)
+                    finally:
+                        self.through._meta.auto_created = False
+
+            return OrderedManyRelatedManager
+
+        return add_custom_queryset_to_many_related_manager(
+            create_forward_many_to_many_manager(
+                model._default_manager.__class__,
+                self.rel,
+                reverse=self.reverse,
+            )
+        )
+
+
+class OrderedManyToManyField(models.ManyToManyField):
+    """
+    A ManyToManyField that automatically sorts all querysets
+    by a special `position` column on the M2M table
+    """
+
+    def _update_m2m_position(self, sender, **kwargs):
+        if kwargs.get('action') in ('post_add', 'post_remove'):
+            order_with_respect_to = None
+            for field in sender._meta.local_fields:
+                if (
+                    isinstance(field, models.ForeignKey) and
+                    isinstance(kwargs['instance'], field.related_model)
+                ):
+                    order_with_respect_to = field.name
+            for i, ig in enumerate(sender.objects.filter(**{
+                order_with_respect_to: kwargs['instance'].pk}
+            )):
+                if ig.position != i:
+                    ig.position = i
+                    ig.save()
+
+    def contribute_to_class(self, cls, name, **kwargs):
+        super(OrderedManyToManyField, self).contribute_to_class(cls, name, **kwargs)
+        setattr(
+            cls, name,
+            OrderedManyToManyDescriptor(self.remote_field, reverse=False)
+        )
+
+        through = getattr(cls, name).through
+        if isinstance(through, str) and "." not in through:
+            # support lazy loading of string model names
+            through = '.'.join([cls._meta.app_label, through])
+        m2m_changed.connect(
+            self._update_m2m_position,
+            sender=through
+        )

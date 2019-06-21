@@ -59,12 +59,13 @@ Before you can run a deployment, you'll need the following installed in your loc
 
 - [Ansible](http://docs.ansible.com/ansible/latest/intro_installation.html) Requires Version 2.4+
 - [Docker](https://docs.docker.com/engine/installation/)
+    + A recent version
 - [docker](https://pypi.org/project/docker/) Python module
     + This is incompatible with `docker-py`. If you have previously installed `docker-py`, please uninstall it.
     + We use this module instead of `docker-py` because it is what the `docker-compose` Python module requires.
 - [GNU Make](https://www.gnu.org/software/make/)
 - [Git](https://git-scm.com/) Requires Version 1.8.4+
-- [Node 8.x LTS version](https://nodejs.org/en/download/)
+- [Node 10.x LTS version](https://nodejs.org/en/download/)
 - [NPM 6.x LTS](https://docs.npmjs.com/)
 
 ### System Requirements
@@ -83,7 +84,7 @@ The system that runs the AWX service will need to satisfy the following requirem
 
 ### Choose a deployment platform
 
-We currently support running AWX as a containerized application using Docker images deployed to either an OpenShift cluster or docker-compose. The remainder of this document will walk you through the process of building the images, and deploying them to either platform.
+We currently support running AWX as a containerized application using Docker images deployed to either an OpenShift cluster, a Kubernetes cluster, or docker-compose. The remainder of this document will walk you through the process of building the images, and deploying them to either platform.
 
 The [installer](./installer) directory contains an [inventory](./installer/inventory) file, and a playbook, [install.yml](./installer/install.yml). You'll begin by setting variables in the inventory file according to the platform you wish to use, and then you'll start the image build and deployment process by running the playbook.
 
@@ -442,6 +443,10 @@ Before starting the build process, review the [inventory](./installer/inventory)
 *host_port*
 
 > Provide a port number that can be mapped from the Docker daemon host to the web server running inside the AWX container. Defaults to *80*.
+
+*host_port_ssl*
+
+> Provide a port number that can be mapped from the Docker daemon host to the web server running inside the AWX container for SSL support. Defaults to *443*, only works if you also set `ssl_certificate` (see below).
 
 *ssl_certificate*
 

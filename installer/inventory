@@ -26,6 +26,12 @@ dockerhub_base=ansible
 # pg_cpu_limit=1000
 # pg_mem_limit=2
 
+# Kubernetes Ingress Annotations
+# You can use the variables below to pass annotations to Kubernetes Ingress
+# The example below shows an annotation to be used with Traefik but other Ingress controllers are also supported.
+#kubernetes_ingress_hostname=awx.example.org
+#kubernetes_ingress_annotations={'kubernetes.io/ingress.class': 'traefik', 'traefik.ingress.kubernetes.io/redirect-entry-point': 'https'}
+
 # Kubernetes and Openshift Install Resource Requests
 # These are the request and limit values for a pod's container for task/web/rabbitmq/memcached/management.
 # The total amount of requested resources for a pod is the sum of all
@@ -53,6 +59,7 @@ awx_task_hostname=awx
 awx_web_hostname=awxweb
 postgres_data_dir=/home/sarlaac/awx_build/postgreDB
 host_port=8052
+host_port_ssl=443
 #ssl_certificate=
 docker_compose_dir=/tmp/awxcompose
 
@@ -132,7 +139,6 @@ project_data_dir=/home/sarlaac/awx_build/projects_dir
 # CA Trust directory. If you need to provide custom CA certificates, supplying
 # this variable causes this directory on the host to be bind mounted over
 # /etc/pki/ca-trust in the awx_task and awx_web containers.
-# NOTE: only obeyed in local_docker install
 #ca_trust_dir=/etc/pki/ca-trust/source/anchors
 
 # Include /etc/nginx/awx_extra.conf

@@ -251,29 +251,11 @@ TEMPLATES = [
     },
 ]
 
-MIDDLEWARE_CLASSES = (  # NOQA
-    'awx.main.middleware.TimingMiddleware',
-    'awx.main.middleware.MigrationRanCheckMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.locale.LocaleMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'awx.main.middleware.ActivityStreamMiddleware',
-    'awx.sso.middleware.SocialAuthMiddleware',
-    'crum.CurrentRequestUserMiddleware',
-    'awx.main.middleware.URLModificationMiddleware',
-    'awx.main.middleware.SessionTimeoutMiddleware',
-)
-
-
 ROOT_URLCONF = 'awx.urls'
 
 WSGI_APPLICATION = 'awx.wsgi.application'
 
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.messages',
@@ -294,7 +276,7 @@ INSTALLED_APPS = (
     'awx.ui',
     'awx.sso',
     'solo'
-)
+]
 
 INTERNAL_IPS = ('127.0.0.1',)
 
@@ -325,7 +307,6 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_METADATA_CLASS': 'awx.api.metadata.Metadata',
     'EXCEPTION_HANDLER': 'awx.api.views.api_exception_handler',
-    'VIEW_NAME_FUNCTION': 'awx.api.generics.get_view_name',
     'VIEW_DESCRIPTION_FUNCTION': 'awx.api.generics.get_view_description',
     'NON_FIELD_ERRORS_KEY': '__all__',
     'DEFAULT_VERSION': 'v2',
@@ -447,16 +428,6 @@ AWX_ISOLATED_VERBOSITY = 0
 #     }
 # }
 
-# Use Django-Debug-Toolbar if installed.
-try:
-    import debug_toolbar
-    INSTALLED_APPS += (debug_toolbar.__name__,)
-except ImportError:
-    pass
-
-DEBUG_TOOLBAR_CONFIG = {
-    'ENABLE_STACKTRACES' : True,
-}
 
 DEVSERVER_DEFAULT_ADDR = '0.0.0.0'
 DEVSERVER_DEFAULT_PORT = '8013'
@@ -464,6 +435,7 @@ DEVSERVER_DEFAULT_PORT = '8013'
 # Set default ports for live server tests.
 os.environ.setdefault('DJANGO_LIVE_TEST_SERVER_ADDRESS', 'localhost:9013-9199')
 
+BROKER_DURABILITY = True
 BROKER_POOL_LIMIT = None
 BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_DEFAULT_QUEUE = 'awx_private_queue'
@@ -628,7 +600,7 @@ AWX_REBUILD_SMART_MEMBERSHIP = False
 ALLOW_JINJA_IN_EXTRA_VARS = 'template'
 
 # Enable dynamically pulling roles from a requirement.yml file
-# when updating SCM projects 
+# when updating SCM projects
 # Note: This setting may be overridden by database settings.
 AWX_ROLES_ENABLED = True
 
@@ -994,6 +966,9 @@ LOGGING = {
         'external_log_enabled': {
             '()': 'awx.main.utils.filters.ExternalLoggerEnabled'
         },
+        'dynamic_level_filter': {
+            '()': 'awx.main.utils.filters.DynamicLevelFilter'
+        }
     },
     'formatters': {
         'simple': {
@@ -1033,7 +1008,7 @@ LOGGING = {
         'external_logger': {
             'class': 'awx.main.utils.handlers.AWXProxyHandler',
             'formatter': 'json',
-            'filters': ['external_log_enabled'],
+            'filters': ['external_log_enabled', 'dynamic_level_filter'],
         },
         'mail_admins': {
             'level': 'ERROR',
@@ -1041,27 +1016,27 @@ LOGGING = {
             'class': 'django.utils.log.AdminEmailHandler',
         },
         'tower_warnings': {
-            'level': 'WARNING',
-            'class':'logging.handlers.RotatingFileHandler',
-            'filters': ['require_debug_false'],
+            # don't define a level here, it's set by settings.LOG_AGGREGATOR_LEVEL
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filters': ['require_debug_false', 'dynamic_level_filter'],
             'filename': os.path.join(LOG_ROOT, 'tower.log'),
             'maxBytes': 1024 * 1024 * 5, # 5 MB
             'backupCount': 5,
             'formatter':'simple',
         },
         'callback_receiver': {
-            'level': 'WARNING',
-            'class':'logging.handlers.RotatingFileHandler',
-            'filters': ['require_debug_false'],
+            # don't define a level here, it's set by settings.LOG_AGGREGATOR_LEVEL
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filters': ['require_debug_false', 'dynamic_level_filter'],
             'filename': os.path.join(LOG_ROOT, 'callback_receiver.log'),
             'maxBytes': 1024 * 1024 * 5, # 5 MB
             'backupCount': 5,
             'formatter':'simple',
         },
         'dispatcher': {
-            'level': 'WARNING',
-            'class':'logging.handlers.RotatingFileHandler',
-            'filters': ['require_debug_false'],
+            # don't define a level here, it's set by settings.LOG_AGGREGATOR_LEVEL
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filters': ['require_debug_false', 'dynamic_level_filter'],
             'filename': os.path.join(LOG_ROOT, 'dispatcher.log'),
             'maxBytes': 1024 * 1024 * 5, # 5 MB
             'backupCount': 5,
@@ -1077,9 +1052,9 @@ LOGGING = {
             'formatter': 'timed_import',
         },
         'task_system': {
-            'level': 'INFO',
-            'class':'logging.handlers.RotatingFileHandler',
-            'filters': ['require_debug_false'],
+            # don't define a level here, it's set by settings.LOG_AGGREGATOR_LEVEL
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filters': ['require_debug_false', 'dynamic_level_filter'],
             'filename': os.path.join(LOG_ROOT, 'task_system.log'),
             'maxBytes': 1024 * 1024 * 5, # 5 MB
             'backupCount': 5,
@@ -1211,3 +1186,20 @@ AWX_REQUEST_PROFILE = False
 
 # Delete temporary directories created to store playbook run-time
 AWX_CLEANUP_PATHS = True
+
+MIDDLEWARE = [
+    'awx.main.middleware.TimingMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'awx.main.middleware.MigrationRanCheckMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'awx.main.middleware.ActivityStreamMiddleware',
+    'awx.sso.middleware.SocialAuthMiddleware',
+    'crum.CurrentRequestUserMiddleware',
+    'awx.main.middleware.URLModificationMiddleware',
+    'awx.main.middleware.SessionTimeoutMiddleware',
+]

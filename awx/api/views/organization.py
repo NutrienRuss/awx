@@ -116,6 +116,7 @@ class OrganizationUsersList(BaseUsersList):
     serializer_class = UserSerializer
     parent_model = Organization
     relationship = 'member_role.members'
+    ordering = ('username',)
 
 
 class OrganizationAdminsList(BaseUsersList):
@@ -124,6 +125,7 @@ class OrganizationAdminsList(BaseUsersList):
     serializer_class = UserSerializer
     parent_model = Organization
     relationship = 'admin_role.members'
+    ordering = ('username',)
 
 
 class OrganizationProjectsList(SubListCreateAttachDetachAPIView):
@@ -176,22 +178,20 @@ class OrganizationNotificationTemplatesAnyList(SubListCreateAttachDetachAPIView)
     model = NotificationTemplate
     serializer_class = NotificationTemplateSerializer
     parent_model = Organization
-    relationship = 'notification_templates_any'
 
 
-class OrganizationNotificationTemplatesErrorList(SubListCreateAttachDetachAPIView):
+class OrganizationNotificationTemplatesStartedList(OrganizationNotificationTemplatesAnyList):
 
-    model = NotificationTemplate
-    serializer_class = NotificationTemplateSerializer
-    parent_model = Organization
+    relationship = 'notification_templates_started'
+
+
+class OrganizationNotificationTemplatesErrorList(OrganizationNotificationTemplatesAnyList):
+
     relationship = 'notification_templates_error'
 
 
-class OrganizationNotificationTemplatesSuccessList(SubListCreateAttachDetachAPIView):
+class OrganizationNotificationTemplatesSuccessList(OrganizationNotificationTemplatesAnyList):
 
-    model = NotificationTemplate
-    serializer_class = NotificationTemplateSerializer
-    parent_model = Organization
     relationship = 'notification_templates_success'
 
 

@@ -44,7 +44,6 @@ from awx.api.serializers import (
     InstanceGroupSerializer,
     InventoryUpdateEventSerializer,
     CustomInventoryScriptSerializer,
-    InventoryDetailSerializer,
     JobTemplateSerializer,
 )
 from awx.api.views.mixin import (
@@ -61,7 +60,7 @@ class InventoryUpdateEventsList(SubListAPIView):
     serializer_class = InventoryUpdateEventSerializer
     parent_model = InventoryUpdate
     relationship = 'inventory_update_events'
-    view_name = _('Inventory Update Events List')
+    name = _('Inventory Update Events List')
     search_fields = ('stdout',)
 
     def finalize_response(self, request, response, *args, **kwargs):
@@ -115,17 +114,11 @@ class InventoryList(ListCreateAPIView):
     model = Inventory
     serializer_class = InventorySerializer
 
-    def get_queryset(self):
-        qs = Inventory.accessible_objects(self.request.user, 'read_role')
-        qs = qs.select_related('admin_role', 'read_role', 'update_role', 'use_role', 'adhoc_role')
-        qs = qs.prefetch_related('created_by', 'modified_by', 'organization')
-        return qs
-
 
 class InventoryDetail(RelatedJobsPreventDeleteMixin, ControlledByScmMixin, RetrieveUpdateDestroyAPIView):
 
     model = Inventory
-    serializer_class = InventoryDetailSerializer
+    serializer_class = InventorySerializer
 
     def update(self, request, *args, **kwargs):
         obj = self.get_object()

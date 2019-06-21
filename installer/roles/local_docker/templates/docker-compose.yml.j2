@@ -12,6 +12,9 @@ services:
       - postgres
       {% endif %}
     ports:
+      {% if ssl_certificate is defined %}
+      - "{{ host_port_ssl }}:8053"
+      {% endif %}
       - "{{ host_port }}:8052"
     hostname: {{ awx_web_hostname }}
     user: root
@@ -25,6 +28,9 @@ services:
     {% endif %}
     {% if ca_trust_dir is defined %}
       - "{{ ca_trust_dir +':/etc/pki/ca-trust/source/anchors:ro' }}"
+    {% endif %}
+    {% if ssl_certificate is defined %}
+      - "{{ ssl_certificate +':/etc/nginx/awxweb.pem:ro' }}"
     {% endif %}
     {% if (awx_container_search_domains is defined) and (',' in awx_container_search_domains) %}
     {% set awx_container_search_domains_list = awx_container_search_domains.split(',') %}
@@ -72,6 +78,9 @@ services:
     {% if ca_trust_dir is defined %}
       - "{{ ca_trust_dir +':/etc/pki/ca-trust/source/anchors:ro' }}"
     {% endif %}
+    {% if ssl_certificate is defined %}
+      - "{{ ssl_certificate +':/etc/nginx/awxweb.pem:ro' }}"
+    {% endif %}
     {% if (awx_container_search_domains is defined) and (',' in awx_container_search_domains) %}
     {% set awx_container_search_domains_list = awx_container_search_domains.split(',') %}
     dns_search:
@@ -102,13 +111,20 @@ services:
     environment:
       RABBITMQ_DEFAULT_VHOST: "{{ rabbitmq_default_vhost }}"
       RABBITMQ_DEFAULT_USER: "{{ rabbitmq_user }}"
-      RABBITMQ_DEFAULT_PASS: "{{ rabbitmq_password }}"
+      RABBITMQ_DEFAULT_PASS: "{{ rabbitmq_password | quote }}"
       RABBITMQ_ERLANG_COOKIE: {{ rabbitmq_erlang_cookie }}
+      http_proxy: {{ http_proxy | default('') }}
+      https_proxy: {{ https_proxy | default('') }}
+      no_proxy: {{ no_proxy | default('') }}
 
   memcached:
     image: memcached:alpine
     container_name: awx_memcached
     restart: unless-stopped
+    environment:
+      http_proxy: {{ http_proxy | default('') }}
+      https_proxy: {{ https_proxy | default('') }}
+      no_proxy: {{ no_proxy | default('') }}
 
   {% if pg_hostname is not defined %}
   postgres:
@@ -119,7 +135,10 @@ services:
       - {{ postgres_data_dir }}:/var/lib/postgresql/data:Z
     environment:
       POSTGRES_USER: {{ pg_username }}
-      POSTGRES_PASSWORD: {{ pg_password }}
+      POSTGRES_PASSWORD: {{ pg_password | quote }}
       POSTGRES_DB: {{ pg_database }}
       PGDATA: /var/lib/postgresql/data/pgdata
+      http_proxy: {{ http_proxy | default('') }}
+      https_proxy: {{ https_proxy | default('') }}
+      no_proxy: {{ no_proxy | default('') }}
   {% endif %}

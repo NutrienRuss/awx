@@ -25,6 +25,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         tgz = gather()
         self.init_logging()
-        self.logger.debug(tgz)
+        if tgz:
+            self.logger.debug(tgz)
         if options.get('ship'):
             ship(tgz)

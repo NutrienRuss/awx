@@ -27,7 +27,15 @@ module.exports = {
             selenium_host: 'localhost',
             selenium_port: 9515,
             default_path_prefix: '',
-            desiredCapabilities: { browserName: 'chrome' },
+            desiredCapabilities: {
+                browserName: 'chrome',
+                chromeOptions: {
+                    w3c: false,
+                    args: [
+                        'window-size=1024,768'
+                    ]
+                }
+            },
             test_workers: { enabled: false },
             globals: {
                 launch_url: AWX_E2E_LAUNCH_URL,
@@ -54,6 +62,7 @@ module.exports = {
             desiredCapabilities: {
                 browserName: 'chrome',
                 chromeOptions: {
+                    w3c: false,
                     args: [
                         'headless',
                         'disable-web-security',
